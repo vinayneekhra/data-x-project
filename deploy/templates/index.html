@@ -1,0 +1,151 @@
+
+{% extends "base.html" %} {% block content %}
+
+<h2>Intracranial Hemorrhage Detection</h2>
+
+<div>
+    <div class="col-md-6">
+        <form id="form" class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-3">
+                    <input type="file" id="selectFile" >
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="image-section" style="">
+        <div class="img-preview">
+            <div id="imagePreview">
+            </div>
+        </div>
+        <div>
+            <!--<button type="button" class="btn btn-primary btn-lg " id="btn-predict">Predict!</button>-->
+        </div>
+    </div>
+
+    <div class="loader" style="display:none;"></div>
+    <h3 id="result">
+        <span> </span>
+    </h3>
+
+</div>
+<!-- include the cornerstone library -->
+<script src="https://unpkg.com/cornerstone-core/dist/cornerstone.min.js"></script>
+  <script src="https://unpkg.com/cornerstone-math"></script>
+<script src="https://unpkg.com/cornerstone-tools@%5E4"></script>
+
+<!-- include the dicomParser library as the WADO image loader depends on it -->
+<script src="https://unpkg.com/dicom-parser@1.8.4/dist/dicomParser.min.js"></script>
+
+<!-- include the cornerstoneWADOImageLoader library -->
+<script src="https://unpkg.com/cornerstone-wado-image-loader@3.0.6/dist/cornerstoneWADOImageLoader.min.js"></script>
+
+<!-- Lines ONLY required for this example to run without building the project -->
+<script>window.cornerstoneWADOImageLoader || document.write('<script src="https://unpkg.com/cornerstone-wado-image-loader">\x3C/script>')</script>
+
+<script>
+    cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+
+    // this function gets called once the user drops the file onto the div
+    function handleFileSelect(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+
+        // Get the FileList object that contains the list of files that were dropped
+        const files = evt.dataTransfer.files;
+
+        // this UI is only built for a single file so just dump the first one
+        file = files[0];
+        const imageId = cornerstoneWADOImageLoader.wadouri.fileManager.add(file);
+        loadAndViewImage(imageId);
+    }
+
+    function handleDragOver(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+    }
+
+    // Setup the dnd listeners.
+    const dropZone = document.getElementById('imagePreview');
+    dropZone.addEventListener('dragover', handleDragOver, false);
+    dropZone.addEventListener('drop', handleFileSelect, false);
+
+
+    cornerstoneWADOImageLoader.configure({
+        beforeSend: function(xhr) {
+            // Add custom headers here (e.g. auth tokens)
+            //xhr.setRequestHeader('x-auth-token', 'my auth token');
+        },
+        useWebWorkers: true,
+    });
+
+    let loaded = false;
+
+    function loadAndViewImage(imageId) {
+        const element = document.getElementById('imagePreview');
+        const start = new Date().getTime();
+        cornerstone.loadImage(imageId).then(function(image) {
+            console.log(image);
+            const viewport = cornerstone.getDefaultViewportForImage(element, image);
+            cornerstone.displayImage(element, image, viewport);
+            if(loaded === false) {
+                loaded = true;
+            }
+
+          });
+}
+
+    cornerstone.events.addEventListener('cornerstoneimageloadprogress', function(event) {
+        const eventData = event.detail;
+        const loadProgress = document.getElementById('loadProgress');
+        loadProgress.textContent = `Image Load Progress: ${eventData.percentComplete}%`;
+    });
+
+    const element = document.getElementById('imagePreview');
+    cornerstone.enable(element);
+
+    document.getElementById('selectFile').addEventListener('change', function(e) {
+        // Add the file to the cornerstoneFileImageLoader and get unique
+        // number for that file
+        const file = e.target.files[0];
+        const imageId = cornerstoneWADOImageLoader.wadouri.fileManager.add(file);
+        loadAndViewImage(imageId);
+        var form_data = new FormData();
+        form_data.append('image', file);
+        document.getElementById('selectFile');
+        // Show loading animation
+        $(this).hide();
+        $('.loader').show();
+
+        // Make prediction by calling api /predict
+        $.ajax({
+            type: 'POST',
+            url: '/predict',
+            data: form_data,
+            contentType: false,
+            cache: false,
+            processData: false,
+            async: true,
+            success: function (data) {
+                // Get and display the result
+                $('.loader').hide()
+                $('#result').fadeIn(600);
+                $('#result').text(' Result:  ' + data);
+                console.log('Success!');
+            },
+            error: (error) => {
+              $('.loader').hide()
+              $('#result').fadeIn(600);
+              $('#result').text(' Result:  ' + error);
+              console.log('failed!');
+
+            }
+        });
+        $('#selectFile').show()
+
+    });
+</script>
+
+{% endblock %}
