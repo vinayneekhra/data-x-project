@@ -2,6 +2,12 @@
 
 ## Links to go through
 
+Project code: Github Repo (https://github.com/vinayneekhra/data-x-project)
+
+Dataset link: From Kaggle RSNA competition (https://www.kaggle.com/c/rsna-intracranial-hemorrhage-detection/overview/description)
+
+
+## Past Projects
 ### 1. Breast Cancer (Herohe)
 https://ecdp2020.grand-challenge.org/Home/
 
